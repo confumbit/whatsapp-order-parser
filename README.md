@@ -2,9 +2,27 @@
 
 A retail pharmacy receives orders through WhatsApp alongside stock inquiries, greetings, and unrelated messages. This project turns those chats into episodes, identifies the ones that need the pharmacy's attention, and classifies the stage of each order. I tested when a local model can make the call and when a larger language model would be worth using.
 
+| Dataset | Evaluation | Estimated input-token savings |
+| --- | --- | --- |
+| 17,498 messages across 1,131 chats | 543 test episodes from held-out phones | 47.4% in the handoff simulation |
+
+```mermaid
+flowchart LR
+    A["WhatsApp messages"] --> B["Group into episodes"]
+    B --> C["Score order relevance"]
+    C -->|"Below cutoff"| D["Classify as unrelated"]
+    C -->|"At or above cutoff"| E["Predict order status"]
+    E -->|"High confidence"| F["Accept order and status"]
+    E -->|"Lower confidence"| G["Defer to LLM (simulated)"]
+```
+
 ## From messages to orders
 
 The frozen dataset contains **17,498 messages across 1,131 chats**. I merged a read-only database export with WhatsApp archives, deduplicated messages, and grouped them by verified phone number. Within each chat, a new episode starts when a pause exceeds both **36 hours** and that chat's average gap. The floor keeps routine overnight pauses from splitting one conversation.
+
+![Synthetic timeline comparing mean-only segmentation with a 36-hour minimum gap](readme-assets/segmentation-example.png)
+
+In this synthetic example, the 18-hour pause stays inside the first episode and the 50-hour pause starts a new one.
 
 ### How I labeled the data
 
@@ -16,6 +34,8 @@ I used large language models to propose **silver labels**, or working labels, fr
 
 I kept all episodes from a phone in the same split, so the models were evaluated on separate phone groups. The **tuned classical pipeline** was strongest on this Colab run. A linear SVM used word and character features to flag unrelated messages, while logistic regression predicted the order stage. It found **8 of 13 unrelated episodes** and missed **2 of 530 order-related episodes** at its validation-selected cutoff. The simpler word baseline missed only one order, so I used it as the relevance filter in a follow-up handoff experiment and paired it with the tuned status classifier.
 
+![Held-out operating points showing unrelated episodes filtered versus genuine order-related episodes missed](readme-assets/cutoff-tradeoff.png)
+
 ## Where an LLM could help
 
 ![Share of held-out episodes handled locally and estimated input tokens saved](readme-assets/llm-handoff.png)
@@ -24,7 +44,9 @@ The local system accepted an unrelated label when the order score was below **0.
 
 On **543 held-out episodes**, the local models handled **225** and deferred **318 (58.6%)**. The system incorrectly filtered **1 of 530 genuine order-related episodes**, and **20 of the 218** automatically accepted orders had an incorrect order or status prediction (**9.2%**). The simulation estimated **47.4% fewer input tokens** than sending everything to an LLM. This uses transcript lengths estimated with the MuRIL tokenizer and excludes prompt overhead, output tokens, and provider pricing. No transcripts were sent to an LLM, and the experiment did not measure production savings or LLM accuracy.
 
-The model and handoff figures reproduce the aggregate results shown in the executed Colab notebook. 
+![Handoff outcomes showing the counts and errors for episodes handled locally and the count deferred to the simulated LLM](readme-assets/handoff-outcomes.png)
+
+The evaluation figures use aggregate results from the executed Colab notebook.
 
 ## What the results support
 
