@@ -36,6 +36,12 @@ I kept all episodes from a phone in the same split, so the models were evaluated
 
 ![Held-out operating points showing unrelated episodes filtered versus genuine order-related episodes missed](readme-assets/cutoff-tradeoff.png)
 
+### Precision–recall across cutoffs
+
+![Precision–recall curves for the word baseline and tuned classical model on a local phone-grouped holdout](readme-assets/precision-recall.png)
+
+Here, **recall** is the share of unrelated episodes caught. **Precision** is the share of flagged episodes that were actually unrelated. The dashed line shows how often an unrelated episode occurs in the test set. This local rerun used a different phone-grouped split from the Colab run above, with 19 unrelated episodes out of 542. It compares the two classical models. The Colab notebook plots the same curves for all three models, including MuRIL, in its final comparison.
+
 ## Where an LLM could help
 
 ![Share of held-out episodes handled locally and estimated input tokens saved](readme-assets/llm-handoff.png)
